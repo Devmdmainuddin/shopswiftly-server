@@ -72,7 +72,7 @@ async function run() {
             const result = await shopSwiftlyproduct.findOne(query)
             res.send(result);
         })
-
+// ..........................................
         app.get("/myQueries", verifyToken, async (req, res) => {
             // console.log(req.params.email);
             console.log(req.query.email)
