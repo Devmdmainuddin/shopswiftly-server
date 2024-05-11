@@ -10,13 +10,34 @@ const port = process.env.PORT || 5000
 
 
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173',
+        'http://localhost:5174',
+    ],
     credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
 
+// verify jwt middleware
 
+const verifyToken = async (req, res, next) => {
+    const token = req.cookies?.token
+    console.log('value of token in middieware', token)
+    if (!token) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+
+    jwt.verify(token, process.env.ACCRSS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            console.log(err)
+            return res.status(401).send({ message: 'unauthorized access' })
+        }
+        console.log('value in the token', decoded)
+        req.user = decoded
+        next()
+    })
+
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_NAME}:${process.env.DB_PASS}@cluster0.jgwprpb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -37,90 +58,146 @@ async function run() {
         const shopSwiftlyUsers = client.db("shopSwiftly").collection("users")
         const shopSwiftlyrecommendation = client.db("shopSwiftly").collection("recommendation")
 
+
+        // .......................................................................
+
         app.get('/queries', async (req, res) => {
             const result = await shopSwiftlyproduct.find().toArray();
             res.send(result)
-          })
+        })
 
-          app.get('/queries/:id', async (req, res) => {
+        app.get('/queries/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await shopSwiftlyproduct.findOne(query)
             res.send(result);
         })
 
-          app.get('/myQueries', async (req, res) => {
+        app.get("/myQueries", verifyToken, async (req, res) => {
+            // console.log(req.params.email);
             console.log(req.query.email)
             console.log('user in the valid token', req.user)
-            if(req.query.email !== req.user.email){
-              return res.status(403).send({message: 'forbidden access'})
+            if (req.query.email !== req.user.email) {
+                return res.status(403).send({ message: 'forbidden access' })
             }
+
             let query = {};
-            if (req.query?.email) {
-              query = { email: req.query.email }
+
+            if (req.query.email) {
+                query = { "userInfo.email": req.query.email }
+                console.log(query)
             }
             const result = await shopSwiftlyproduct.find(query).toArray();
             res.send(result)
-          })
 
-          app.post('/addQueries', async (req, res) => {
+        })
+
+        app.post('/addQueries', async (req, res) => {
             const querie = req.body;
             console.log('querie', querie)
             const result = await shopSwiftlyproduct.insertOne(querie)
             res.send(result);
         })
 
-        app.put('/queries/:id', async (req, res) => {
+        app.put('/updateQueries/:id', async (req, res) => {
             const id = req.params.id;
             const querie = req.body;
             const filter = { _id: new ObjectId(id) }
             const options = { upsert: true };
             const updatequerie = {
                 $set: {
-                    
                     image: querie.image,
                     queryTitle: querie.queryTitle,
                     productName: querie.productName,
                     brandName: querie.brandName,
-                    boycotReason: querie.boycotReason,
-                    update_posted: querie.update_posted,
-                   
+                    lastUpdate: querie.lastUpdate,
+                    recommendationCount:querie.recommendationCount,
+
                 }
             };
             const result = await shopSwiftlyproduct.updateOne(filter, updatequerie, options);
-            console.log(craf)
+            console.log(querie)
+            res.send(result);
+        })
+        app.put('/updaterecommen/:id', async (req, res) => {
+            const id = req.params.id;
+            const querie = req.body;
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true };
+            const updatequerie = {
+                $set: {
+                    recommendationCount: querie.recommendationCount,
+                }
+            };
+            const result = await shopSwiftlyproduct.updateOne(filter, updatequerie, options);
+            console.log(querie)
             res.send(result);
         })
 
 
-          app.delete('/myQueries/:id', async (req, res) => {
+        app.delete('/myQueries/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await shopSwiftlyproduct.deleteOne(query)
             res.send(result);
             console.log('delete', id)
-          })
+        })
 
-          app.post('/addRecommendation', async (req, res) => {
+        // .......................................................................
+
+
+        app.get('/recommendation', async (req, res) => {
+            const result = await shopSwiftlyrecommendation.find().toArray();
+            res.send(result)
+        })
+        app.get("/myRecommendation", verifyToken, async (req, res) => {
+            // console.log(req.params.email);
+            console.log(req.query.email)
+            console.log('user in the valid token', req.user)
+            if (req.query.email !== req.user.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
+            let query = {};
+
+            if (req.query.email) {
+                query = { "reuserInfo.reEmail": req.query.email }
+                console.log(query)
+            }
+            const result = await shopSwiftlyrecommendation.find(query).toArray();
+            res.send(result)
+
+        })
+        
+
+
+        app.post('/addRecommendation', async (req, res) => {
             const querie = req.body;
             console.log('querie', querie)
             const result = await shopSwiftlyrecommendation.insertOne(querie)
             res.send(result);
         })
 
+        app.delete('/recommendation/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await shopSwiftlyrecommendation.deleteOne(query)
+            res.send(result);
+            console.log('delete', id)
+        })
 
-
-
-        app.post('/jwt', async (req, res) =>{
+        // .......................................................................
+        app.post('/jwt', async (req, res) => {
             const user = req.body;
             console.log(user);
             const token = jwt.sign(user, process.env.ACCRSS_TOKEN_SECRET, { expiresIn: '1h' })
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: false,
-                sameSite: 'strict'
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
             }).send({ success: true })
         })
+
         app.post('/logout', async (req, res) => {
             const user = req.body;
             console.log('logging out', user);
