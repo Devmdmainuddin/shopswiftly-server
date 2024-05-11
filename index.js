@@ -62,9 +62,16 @@ async function run() {
         // .......................................................................
 
         app.get('/queries', async (req, res) => {
-            const result = await shopSwiftlyproduct.find().toArray();
+            const page = parseInt(req.query.page)
+            const size = parseInt(req.query.size)
+            console.log('pagination query',req.query)
+            const result = await shopSwiftlyproduct.find().skip(page * size).limit(size).toArray();
             res.send(result)
         })
+        app.get('/queriesCount',async (req,res)=>{
+            const count = await shopSwiftlyproduct.estimatedDocumentCount();
+            res.send({count})
+          })
 
         app.get('/queries/:id', async (req, res) => {
             const id = req.params.id;
