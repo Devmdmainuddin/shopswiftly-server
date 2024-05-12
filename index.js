@@ -61,43 +61,52 @@ async function run() {
 
         // .......................................................................
 
+        app.get('/querie', async (req, res) => {
+            const result = await shopSwiftlyproduct.find().sort({createAt: -1}).toArray();
+            res.send(result)
+        })
+
+
+
+
         app.get('/queries', async (req, res) => {
             const page = parseInt(req.query.page)
             const size = parseInt(req.query.size)
             const filter = req.query.filter
             const sort = req.query.sort
             const search = req.query.search
-            console.log('pagination query',req.query)
+            console.log('pagination query', req.query)
 
             let query = {
-                productName: { $regex: search, $options: 'i' },
-              }
+                productName: { $regex: String(search), $options: 'i' },
+            }
             if (filter) query.queryTitle = filter
             let options = {}
-            if (sort) options = { sort: {createAt: sort === 'asc' ? 1 : -1 } }
-            const result = await shopSwiftlyproduct.find(query,options).skip(page * size).limit(size).toArray();
+            if (sort) options = { sort: { createAt: sort === 'asc' ? 1 : -1 } }
+            const result = await shopSwiftlyproduct.find(query, options).skip(page * size).limit(size).toArray();
             res.send(result)
         })
 
-        app.get('/queriesCount',async (req,res)=>{
+        app.get('/queriesCount', async (req, res) => {
             const filter = req.query.filter
             const search = req.query.search
             let query = {
-                productName: { $regex: search, $options: 'i' },
-              }
-              if (filter) query.queryTitle = filter
+                productName: { $regex: String(search) , $options: 'i' },
+            }
+            if (filter) query.queryTitle = filter
             // const count = await shopSwiftlyproduct.estimatedDocumentCount(query);
             const count = await shopSwiftlyproduct.countDocuments(query);
-            res.send({count})
-          })
-// Get a single  data
+            res.send({ count })
+        })
+
+        // Get a single  data
         app.get('/queries/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await shopSwiftlyproduct.findOne(query)
             res.send(result);
         })
-// ..........................................
+        // ..........................................
         app.get("/myQueries", verifyToken, async (req, res) => {
             // console.log(req.params.email);
             console.log(req.query.email)
@@ -112,7 +121,7 @@ async function run() {
                 query = { "userInfo.email": req.query.email }
                 console.log(query)
             }
-            const result = await shopSwiftlyproduct.find(query).toArray();
+            const result = await shopSwiftlyproduct.find(query).sort({createAt: -1}).toArray();
             res.send(result)
 
         })
@@ -136,7 +145,7 @@ async function run() {
                     productName: querie.productName,
                     brandName: querie.brandName,
                     lastUpdate: querie.lastUpdate,
-                    recommendationCount:querie.recommendationCount,
+                    recommendationCount: querie.recommendationCount,
 
                 }
             };
@@ -175,14 +184,16 @@ async function run() {
             const result = await shopSwiftlyrecommendation.find().toArray();
             res.send(result)
         })
+
+
         app.get("/myRecommendation", verifyToken, async (req, res) => {
-            // console.log(req.params.email);
+
             console.log(req.query.email)
             console.log('user in the valid token', req.user)
             if (req.query.email !== req.user.email) {
                 return res.status(403).send({ message: 'forbidden access' })
             }
-
+            
             let query = {};
 
             if (req.query.email) {
@@ -193,8 +204,8 @@ async function run() {
             res.send(result)
 
         })
-        
-// ....................................................
+
+        // ....................................................
 
         app.post('/addRecommendation', async (req, res) => {
             const querie = req.body;
@@ -222,6 +233,9 @@ async function run() {
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
             }).send({ success: true })
         })
+
+
+
 
         app.post('/logout', async (req, res) => {
             const user = req.body;
