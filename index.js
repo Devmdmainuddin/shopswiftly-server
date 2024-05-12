@@ -64,15 +64,33 @@ async function run() {
         app.get('/queries', async (req, res) => {
             const page = parseInt(req.query.page)
             const size = parseInt(req.query.size)
+            const filter = req.query.filter
+            const sort = req.query.sort
+            const search = req.query.search
             console.log('pagination query',req.query)
-            const result = await shopSwiftlyproduct.find().skip(page * size).limit(size).toArray();
+
+            let query = {
+                productName: { $regex: search, $options: 'i' },
+              }
+            if (filter) query.queryTitle = filter
+            let options = {}
+            if (sort) options = { sort: {createAt: sort === 'asc' ? 1 : -1 } }
+            const result = await shopSwiftlyproduct.find(query,options).skip(page * size).limit(size).toArray();
             res.send(result)
         })
+
         app.get('/queriesCount',async (req,res)=>{
-            const count = await shopSwiftlyproduct.estimatedDocumentCount();
+            const filter = req.query.filter
+            const search = req.query.search
+            let query = {
+                productName: { $regex: search, $options: 'i' },
+              }
+              if (filter) query.queryTitle = filter
+            // const count = await shopSwiftlyproduct.estimatedDocumentCount(query);
+            const count = await shopSwiftlyproduct.countDocuments(query);
             res.send({count})
           })
-
+// Get a single  data
         app.get('/queries/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
