@@ -12,6 +12,8 @@ const port = process.env.PORT || 5000
 app.use(cors({
     origin: ['http://localhost:5173',
         'http://localhost:5174',
+        'https://shopswiftly-1c832.web.app',
+        'https://shopswiftly-1c832.firebaseapp.com'
     ],
     credentials: true
 }));
